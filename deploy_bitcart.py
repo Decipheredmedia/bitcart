@@ -288,7 +288,7 @@ class SystemPrep:
         else:
             log.info("Installing Python deps inline…")
             run(
-                [sys.executable, "-m", "pip", "install", "-q", "requests==2.32.3", "pyyaml==6.0.2", "jinja2==3.1.4", "cryptography==42.0.8"],
+                [sys.executable, "-m", "pip", "install", "-q", "requests==2.32.3", "pyyaml==6.0.2", "jinja2==3.1.4", "cryptography==46.0.5"],
                 dry_run=self.dry_run,
             )
 
