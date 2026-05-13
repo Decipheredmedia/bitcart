@@ -233,10 +233,9 @@ def validate_wallet(coin: str, address: str) -> bool:
         )
     elif coin == "ltc":
         return bool(
-            re.match(r"^[LMT][pub|tpub][a-zA-Z0-9]{100,}$", address)
+            re.match(r"^(?:[xyzLMT]pub)[a-zA-Z0-9]{100,}$", address)
             or re.match(r"^ltc1[a-z0-9]{25,90}$", address)
             or re.match(r"^[LM3][a-km-zA-HJ-NP-Z1-9]{25,34}$", address)
-            or re.match(r"^[xyzLMT]pub[a-zA-Z0-9]{100,}$", address)
         )
     elif coin == "bch":
         return bool(
@@ -793,7 +792,7 @@ class WalletProvisioner:
         resp = requests.post(
             f"{self.base_url}/api/token",
             json={
-                "username": "admin",
+                "username": self.cfg.email,
                 "password": self.cfg.admin_password,
                 "permissions": ["full_control"],
             },
@@ -1352,7 +1351,10 @@ class SEOGenerator:
             try:
                 log.info("Pinging %s…", url)
                 if not self.dry_run:
-                    urllib.request.urlopen(url, timeout=10)  # noqa: S310
+                    if requests is not None:
+                        requests.get(url, timeout=10)
+                    else:
+                        urllib.request.urlopen(url, timeout=10)  # noqa: S310
             except Exception as exc:
                 log.warning("Ping failed for %s: %s", url, exc)
 
@@ -1802,12 +1804,18 @@ def cmd_backup(args: argparse.Namespace) -> None:
 
     # Dump Postgres
     dump_path = Path("/tmp/bitcart-pg-dump.sql")
-    run(
-        ["docker", "compose", "exec", "-T", "postgres",
-         "pg_dump", "-U", "postgres", "bitcartcc"],
-        cwd=cfg.docker_dir,
-        dry_run=dry_run,
-    )
+    if not dry_run:
+        result = run(
+            ["docker", "compose", "exec", "-T", "postgres",
+             "pg_dump", "-U", "postgres", "bitcartcc"],
+            cwd=cfg.docker_dir,
+            capture=True,
+            dry_run=False,
+        )
+        dump_path.write_text(result.stdout)
+        log.info("Postgres dump written to %s", dump_path)
+    else:
+        log.info("[DRY-RUN] Would dump Postgres to %s", dump_path)
 
     # Create tarball
     sources = [cfg.install_dir, cfg.docker_dir / ".env", cfg.seo_dir]
@@ -1837,11 +1845,19 @@ def cmd_restore(args: argparse.Namespace) -> None:
         log.error("Backup file not found: %s", input_path)
         sys.exit(1)
     if not dry_run:
+        restore_dir = Path("/tmp/bitcart-restore")
+        restore_dir.mkdir(parents=True, exist_ok=True)
         with tarfile.open(input_path, "r:gz") as tar:
-            tar.extractall("/tmp/bitcart-restore")  # noqa: S202
-        log.info("Extracted backup to /tmp/bitcart-restore")
+            for member in tar.getmembers():
+                # Prevent path traversal: ensure all extracted paths stay within restore_dir
+                member_path = (restore_dir / member.name).resolve()
+                if not str(member_path).startswith(str(restore_dir.resolve())):
+                    log.error("Refusing to extract path-traversal member: %s", member.name)
+                    sys.exit(1)
+                tar.extract(member, path=restore_dir)
+        log.info("Extracted backup to %s", restore_dir)
         # Restore Postgres dump if present
-        dump = Path("/tmp/bitcart-restore/bitcart-pg-dump.sql")
+        dump = restore_dir / "bitcart-pg-dump.sql"
         if dump.exists():
             cfg = _load_config(args)
             run(
