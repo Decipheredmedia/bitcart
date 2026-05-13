@@ -1,0 +1,144 @@
+server {
+    listen 80;
+    server_name {{ domain }};
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name {{ domain }};
+
+    ssl_certificate /etc/letsencrypt/live/{{ domain }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ domain }}/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), camera=(), microphone=()" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss:; frame-ancestors 'self';" always;
+
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_min_length 1024;
+    gzip_types
+        text/plain
+        text/css
+        text/xml
+        text/javascript
+        application/json
+        application/javascript
+        application/xml
+        application/xml+rss
+        application/xhtml+xml
+        image/svg+xml
+        font/woff
+        font/woff2;
+
+    # Brotli (enable if ngx_brotli module present)
+    # brotli on;
+    # brotli_comp_level 6;
+    # brotli_types text/plain text/css application/json application/javascript text/xml application/xml;
+
+    # Cache static assets
+    location ~* \.(jpg|jpeg|png|gif|ico|svg|webp|woff|woff2|ttf|css|js)$ {
+        proxy_pass http://127.0.0.1:{{ upstream_port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    # SEO files
+    location = /robots.txt {
+        alias /opt/bitcart-seo/{{ domain }}/robots.txt;
+        add_header Content-Type text/plain;
+        expires 1d;
+    }
+
+    location = /sitemap.xml {
+        alias /opt/bitcart-seo/{{ domain }}/sitemap.xml;
+        add_header Content-Type application/xml;
+        expires 6h;
+    }
+
+    location = /sitemap_index.xml {
+        alias /opt/bitcart-seo/{{ domain }}/sitemap_index.xml;
+        add_header Content-Type application/xml;
+        expires 6h;
+    }
+
+    location = /humans.txt {
+        alias /opt/bitcart-seo/{{ domain }}/humans.txt;
+        add_header Content-Type text/plain;
+    }
+
+    location = /ads.txt {
+        alias /opt/bitcart-seo/{{ domain }}/ads.txt;
+        add_header Content-Type text/plain;
+    }
+
+    location /.well-known/ {
+        alias /opt/bitcart-seo/{{ domain }}/.well-known/;
+        add_header Content-Type text/plain;
+    }
+
+    # IndexNow key file
+    location = /{{ indexnow_key }}.txt {
+        alias /opt/bitcart-seo/{{ domain }}/{{ indexnow_key }}.txt;
+        add_header Content-Type text/plain;
+    }
+
+    # Search console verifications
+    {% if google_verification %}
+    location = /{{ google_verification }}.html {
+        alias /opt/bitcart-seo/{{ domain }}/{{ google_verification }}.html;
+        add_header Content-Type text/html;
+    }
+    {% endif %}
+    {% if bing_verification %}
+    location = /BingSiteAuth.xml {
+        alias /opt/bitcart-seo/{{ domain }}/BingSiteAuth.xml;
+        add_header Content-Type application/xml;
+    }
+    {% endif %}
+
+    # Web manifest and icons
+    location = /manifest.webmanifest {
+        alias /opt/bitcart-seo/{{ domain }}/manifest.webmanifest;
+        add_header Content-Type application/manifest+json;
+    }
+
+    # Main proxy
+    location / {
+        proxy_pass http://127.0.0.1:{{ upstream_port }};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 75s;
+
+        # Image lazy-load hint headers
+        add_header Accept-CH "Viewport-Width, DPR, Width";
+        add_header Accept-CH-Lifetime "86400";
+    }
+
+    # Logging
+    access_log /var/log/nginx/{{ domain }}-access.log combined;
+    error_log /var/log/nginx/{{ domain }}-error.log warn;
+}

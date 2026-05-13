@@ -1,0 +1,6 @@
+# deploy_bitcart.py — pinned runtime dependencies
+# Install with: pip install -r requirements-deploy.txt
+requests==2.32.3
+pyyaml==6.0.2
+jinja2==3.1.4
+cryptography==46.0.5

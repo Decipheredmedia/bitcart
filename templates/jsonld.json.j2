@@ -1,0 +1,62 @@
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "{{ store_name | e }}",
+    "url": "https://{{ domain }}",
+    "logo": "https://{{ domain }}/favicon-192x192.png",
+    "sameAs": [],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer support",
+      "email": "{{ email | e }}"
+    }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "url": "https://{{ domain }}",
+    "name": "{{ store_name | e }}",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://{{ domain }}/search?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {% for crumb in breadcrumbs %}
+      {
+        "@type": "ListItem",
+        "position": {{ loop.index }},
+        "name": "{{ crumb.name | e }}",
+        "item": "https://{{ domain }}{{ crumb.path }}"
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+  {% for product in products %}
+  ,{
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "{{ product.name | e }}",
+    "description": "{{ product.description | e | default('') }}",
+    "url": "https://{{ domain }}/products/{{ product.id }}",
+    {% if product.image %}
+    "image": "{{ product.image }}",
+    {% endif %}
+    "offers": {
+      "@type": "Offer",
+      "priceCurrency": "{{ product.currency | default('USD') }}",
+      "price": "{{ product.price | default('0') }}",
+      "availability": "https://schema.org/InStock",
+      "url": "https://{{ domain }}/products/{{ product.id }}"
+    }
+  }
+  {% endfor %}
+]
