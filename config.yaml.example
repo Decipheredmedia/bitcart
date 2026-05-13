@@ -1,0 +1,113 @@
+# config.yaml.example — Bitcart deployment configuration
+# Copy this file to config.yaml, fill in all fields, then run:
+#   sudo python3 deploy_bitcart.py install --config config.yaml
+#
+# All fields are documented inline. Required fields have no default.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Domains
+# Each domain must have a valid DNS A-record pointing to this server's IP
+# before running the script (Let's Encrypt will verify ownership).
+# ---------------------------------------------------------------------------
+
+# Primary API domain (e.g. pay.example.com)
+domain: "pay.example.com"
+
+# Admin panel domain (e.g. admin.example.com)
+admin_domain: "admin.example.com"
+
+# Storefront domain (e.g. shop.example.com)
+store_domain: "shop.example.com"
+
+# ---------------------------------------------------------------------------
+# Email
+# Used for Let's Encrypt registration and as the initial admin e-mail.
+# Must be a valid RFC-5322 address.
+# ---------------------------------------------------------------------------
+email: "admin@example.com"
+
+# ---------------------------------------------------------------------------
+# Store branding
+# ---------------------------------------------------------------------------
+store_name: "My Bitcart Store"
+
+# ---------------------------------------------------------------------------
+# Wallets
+# Provide the extended public key (xpub/ypub/zpub) or watch-only address
+# for each cryptocurrency you want to accept. Omit a coin to disable it.
+#
+# Supported coins: btc, ltc, bch, xmr, eth, trx, usdt
+#
+# Format notes:
+#   BTC  — xpub…, ypub…, zpub…, bc1q… (bech32), or 1/3… (legacy/P2SH)
+#   LTC  — Ltub…, xpub…, ltc1q…, L/M…
+#   BCH  — bitcoincash:q…, xpub…, or 1/3…
+#   XMR  — 4… (95-char Monero standard address)
+#   ETH  — 0x… (EIP-55 checksum address)
+#   USDT — 0x… (ERC-20 on Ethereum, same format as ETH)
+#   TRX  — T… (Tron address)
+# ---------------------------------------------------------------------------
+wallets:
+  btc: "xpub6CUGRUonZSQ4TWtTMmzXdrXDtypWKiKp6ska5jf15duBFveqKLV7T9tCuAgrVezta88Mq6QPKP1BwSgoU6FXDdGw7uXZH2bGBEK9Ga35Gt"
+  # ltc: "Ltub2YDQmP64jFqSBgSeqkTG5pT8TMNJH6kc6TBLv2bntFdH5bQCRrGqJgV6HJEYGwuaEh9G8K1j3W2PfPPHJ5vbQmLKvbbQqXb4d6K2LJLLR"
+  # bch: "bitcoincash:qr5g8jnz67n68q89n6c8yknl4xhq5jnjzguqjy4gta"
+  # xmr: "48daf1rG3hE1Txapcsxh6WXNe9MLNKtu7W7tKTivtSoVLHErYzvdcpea4W8ptv9oSL9nYBPy83LQvcnXbLZq39FkVnVwmqz"
+  # eth: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+  # trx: "TKczxiWfGCPjkFABMEf7bFgnFLBLSzSKTN"
+  # usdt: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+
+# ---------------------------------------------------------------------------
+# Authentication
+# ---------------------------------------------------------------------------
+
+# Initial admin panel password.
+# Requirements: min 16 chars, at least one uppercase, lowercase, digit,
+# and special character (!@#$%^&* etc).
+admin_password: "ChangeMe!Bitcart2024#"
+
+# Postgres password. Leave blank to auto-generate a secure random password.
+# Auto-generated passwords are NOT printed to stdout; they are stored only
+# in the .env file at /opt/bitcart-docker/.env (mode 600).
+db_password: ""
+
+# ---------------------------------------------------------------------------
+# Features
+# ---------------------------------------------------------------------------
+
+# Enable Tor hidden service. When true, an onion address will be provisioned.
+tor_enable: false
+
+# Enable Lightning Network (LN) for BTC (and LTC if configured).
+# Requires extra ports to be open — the script will configure UFW accordingly.
+lightning_enable: false
+
+# ---------------------------------------------------------------------------
+# Cryptos list
+# Auto-derived from the wallets section above. Override here only if you
+# want to enable a daemon without a watch-only wallet (advanced use).
+# ---------------------------------------------------------------------------
+# cryptos:
+#   - btc
+#   - ltc
+
+# ---------------------------------------------------------------------------
+# Directory overrides (optional — defaults shown)
+# ---------------------------------------------------------------------------
+install_dir: "/opt/bitcart"
+docker_dir: "/opt/bitcart-docker"
+
+# ---------------------------------------------------------------------------
+# SEO — search console ownership verification tokens
+# Obtain these from the respective webmaster consoles.
+# Leave blank to skip generating the verification files.
+# ---------------------------------------------------------------------------
+
+# Google Search Console: HTML file verification.
+# Value is the token portion only, e.g. "google1234abcd5678efgh".
+# The script will serve /<token>.html at your store domain.
+google_verification: ""
+
+# Bing Webmaster Tools: XML file verification.
+# Value is the content of the <content> tag in BingSiteAuth.xml.
+bing_verification: ""

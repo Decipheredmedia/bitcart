@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <!-- Static pages -->
+  {% for page in static_pages %}
+  <url>
+    <loc>https://{{ domain }}{{ page.path }}</loc>
+    <lastmod>{{ page.lastmod }}</lastmod>
+    <changefreq>{{ page.changefreq }}</changefreq>
+    <priority>{{ page.priority }}</priority>
+  </url>
+  {% endfor %}
+
+  <!-- Dynamic product pages -->
+  {% for product in products %}
+  <url>
+    <loc>https://{{ domain }}/products/{{ product.id }}</loc>
+    <lastmod>{{ product.updated_at | default(generated_at) }}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    {% if product.image %}
+    <image:image>
+      <image:loc>{{ product.image }}</image:loc>
+      <image:title>{{ product.name | e }}</image:title>
+    </image:image>
+    {% endif %}
+  </url>
+  {% endfor %}
+
+  <!-- Category pages -->
+  {% for category in categories %}
+  <url>
+    <loc>https://{{ domain }}/category/{{ category.slug }}</loc>
+    <lastmod>{{ generated_at }}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  {% endfor %}
+
+</urlset>
