@@ -38,7 +38,6 @@ import textwrap
 import time
 import traceback
 import urllib.parse
-import urllib.request
 from pathlib import Path
 from typing import Any, Optional
 
@@ -233,7 +232,7 @@ def validate_wallet(coin: str, address: str) -> bool:
         )
     elif coin == "ltc":
         return bool(
-            re.match(r"^(?:[xyzLMT]pub)[a-zA-Z0-9]{100,}$", address)
+            re.match(r"^(?:Ltub|Mtub|Tpub|[xyz]pub)[a-zA-Z0-9]{100,}$", address)
             or re.match(r"^ltc1[a-z0-9]{25,90}$", address)
             or re.match(r"^[LM3][a-km-zA-HJ-NP-Z1-9]{25,34}$", address)
         )
@@ -1351,10 +1350,7 @@ class SEOGenerator:
             try:
                 log.info("Pinging %s…", url)
                 if not self.dry_run:
-                    if requests is not None:
-                        requests.get(url, timeout=10)
-                    else:
-                        urllib.request.urlopen(url, timeout=10)  # noqa: S310
+                    requests.get(url, timeout=10)
             except Exception as exc:
                 log.warning("Ping failed for %s: %s", url, exc)
 
@@ -1812,7 +1808,7 @@ def cmd_backup(args: argparse.Namespace) -> None:
             capture=True,
             dry_run=False,
         )
-        dump_path.write_text(result.stdout)
+        dump_path.write_bytes(result.stdout.encode("utf-8", errors="surrogateescape"))
         log.info("Postgres dump written to %s", dump_path)
     else:
         log.info("[DRY-RUN] Would dump Postgres to %s", dump_path)
@@ -1847,11 +1843,12 @@ def cmd_restore(args: argparse.Namespace) -> None:
     if not dry_run:
         restore_dir = Path("/tmp/bitcart-restore")
         restore_dir.mkdir(parents=True, exist_ok=True)
+        resolved_restore = restore_dir.resolve()
         with tarfile.open(input_path, "r:gz") as tar:
             for member in tar.getmembers():
                 # Prevent path traversal: ensure all extracted paths stay within restore_dir
                 member_path = (restore_dir / member.name).resolve()
-                if not str(member_path).startswith(str(restore_dir.resolve())):
+                if not member_path.is_relative_to(resolved_restore):
                     log.error("Refusing to extract path-traversal member: %s", member.name)
                     sys.exit(1)
                 tar.extract(member, path=restore_dir)
